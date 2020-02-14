@@ -8,6 +8,7 @@ import (
 	"log/syslog"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"regexp"
 	"strconv"
@@ -31,19 +32,23 @@ var (
 	hostname string
 	port     uint16
 
+	useSyslog     = true
 	url           string
 	guessRemoteIP bool
+	dumpPath      string
 
 	rootCmd = &cobra.Command{
-		Use:   appName,
-		Short: "A helper for OpenSSH's AuthorizedKeysCommand",
-		Run:   root,
+		Use:    appName,
+		PreRun: prerun,
+		Short:  "A helper for OpenSSH's AuthorizedKeysCommand",
+		Run:    root,
 	}
+
+	dumpWriter io.Writer
 )
 
 func init() {
 	helpFlag := false
-	useSyslog := true
 
 	// Trick to use '-h' for something else than help. This works by
 	// replacing the default help flag with one with no shorthand set.
@@ -64,7 +69,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&url, "url", "", "", "URL to use")
 	rootCmd.PersistentFlags().BoolVarP(&guessRemoteIP, "guess-remote-ip", "", true, "Try to guess remote IP. Requires root")
 	rootCmd.PersistentFlags().BoolVarP(&useSyslog, "use-syslog", "", useSyslog, "Log to syslog")
+	rootCmd.PersistentFlags().StringVarP(&dumpPath, "dump", "", "", "Dump HTTP request/response to path")
+}
 
+func prerun(_ *cobra.Command, _ []string) {
 	if useSyslog {
 		writer, err := syslog.New(syslog.LOG_ERR|syslog.LOG_AUTH, appName)
 		if err != nil {
@@ -72,6 +80,14 @@ func init() {
 		}
 
 		log.SetOutput(writer)
+	}
+
+	if dumpPath != "" {
+		w, err := os.OpenFile(dumpPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+		if err != nil {
+			log.Fatalf("Error opening %s: %s", dumpPath, err.Error())
+		}
+		dumpWriter = w
 	}
 }
 
@@ -84,10 +100,20 @@ func httpDo(req *http.Request) (*http.Response, error) {
 		panic("httpDo() only supports requests without body")
 	}
 
+	if dumpWriter != nil {
+		d, _ := httputil.DumpRequestOut(req, false)
+		_, _ = dumpWriter.Write(d)
+	}
+
 	for retryCount := 0; retryCount < 5; retryCount++ {
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, err
+		}
+
+		if dumpWriter != nil {
+			d, _ := httputil.DumpResponse(resp, false)
+			_, _ = dumpWriter.Write(d)
 		}
 
 		if resp.StatusCode < 500 {

@@ -33,6 +33,7 @@ The following tokens from OpenSSH are supported:
 | --port            | 22                                 | TCP port of the local SSH server      |
 | --use-syslog      | true                               | Log to syslog                         |
 | --guess-remote-ip | true                               | Try to guess remote IP. Requires root |
+| --dump <path>     |                                    | Dump HTTP traffic to path             |
 
 ## Implement the server-side
 
