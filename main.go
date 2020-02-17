@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,6 +48,44 @@ var (
 	dumpWriter io.Writer
 )
 
+// fqdn will try to guess the FQDN based on the same technique used by
+// hostname -f.
+func fqdn() string {
+	// Use Go's standard library hysteresis to determine the hostname.
+	hostname, err := os.Hostname()
+	if err != nil {
+		return ""
+	}
+
+	// Get an IP for the hostname returned from /etc/hostname.
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		return hostname
+	}
+
+	for _, ip := range ips {
+		// We only do the lookup on 127.0.0.0/8 IP adresses to avoid
+		// depending on a resolver that might resolve one of our
+		// networked IP's to something generic and non-usable for
+		// our use-case.
+		if ipv4 := ip.To4(); ipv4 != nil && ip.IsLoopback() {
+			ip, err := ipv4.MarshalText()
+			if err != nil {
+				return hostname
+			}
+
+			hosts, err := net.LookupAddr(string(ip))
+			if err != nil || len(hosts) == 0 {
+				return hostname
+			}
+
+			return strings.TrimSuffix(hosts[0], ".")
+		}
+	}
+
+	return hostname
+}
+
 func init() {
 	helpFlag := false
 
@@ -62,8 +101,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&uid, "uid", "U", "", "The numeric user ID of the target user (%U)")
 	rootCmd.PersistentFlags().StringVarP(&username, "username", "u", "", "The username (%u)")
 
-	osHostname, _ := os.Hostname()
-	rootCmd.PersistentFlags().StringVarP(&hostname, "hostname", "", osHostname, "The local hostname")
+	rootCmd.PersistentFlags().StringVarP(&hostname, "hostname", "", fqdn(), "The local hostname")
 	rootCmd.PersistentFlags().Uint16VarP(&port, "port", "", 22, "The port SSH is listening to")
 
 	rootCmd.PersistentFlags().StringVarP(&url, "url", "", "", "URL to use")
