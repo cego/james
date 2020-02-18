@@ -51,7 +51,6 @@ var (
 	dumpWriter io.Writer
 )
 
-
 type keyResponse struct {
 	URL     *url.URL
 	Payload []byte
@@ -178,46 +177,47 @@ func httpDo(req *http.Request) (*http.Response, error) {
 
 	return nil, fmt.Errorf("giving up on %s", req.URL)
 }
+func doKeyRequest(url *url.URL) keyResponse {
+	keyResult := keyResponse{URL: url}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
+	if err != nil {
+		keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
+		return keyResult
+	}
+
+	resp, err := httpDo(req)
+	if err != nil {
+		keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
+		return keyResult
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		keyResult.Error = fmt.Errorf("HTTP unexpected status code %s: %d", url, resp.StatusCode)
+		return keyResult
+	}
+
+	// lets just say every http request does not produce more then a meg of public key material
+	limit := io.LimitReader(resp.Body, 1024*1024)
+
+	body, err := ioutil.ReadAll(limit)
+	if err != nil {
+		keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
+		return keyResult
+	}
+
+	keyResult.Payload = body
+	return keyResult
+}
 
 func httpWorker(urls chan *url.URL, results chan keyResponse) {
 	for url := range urls {
-		keyResult := keyResponse{URL: url}
-
-		// as james will exit in just a second - we accept context leakage
-		ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-		req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
-		if err != nil {
-			keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
-			results <- keyResult
-			continue
-		}
-
-		resp, err := httpDo(req)
-		if err != nil {
-			keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
-			results <- keyResult
-			continue
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			keyResult.Error = fmt.Errorf("HTTP unexpected status code %s: %d", url, resp.StatusCode)
-			results <- keyResult
-			continue
-		}
-
-		// lets just say every http request does not produce more then a meg of public key material
-		limit := io.LimitReader(resp.Body, 1024*1024)
-
-		body, err := ioutil.ReadAll(limit)
-		if err != nil {
-			keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
-			results <- keyResult
-			continue
-		}
-
-		keyResult.Payload = body
+		keyResult := doKeyRequest(url)
 		results <- keyResult
 	}
 }
@@ -277,7 +277,7 @@ func root(_ *cobra.Command, _ []string) {
 		q.Add("username", username)
 	}
 
-	jobs := make(chan *url.URL)
+	jobs := make(chan *url.URL, len(urls))
 	results := make(chan keyResponse, len(urls))
 
 	// startup some httpWorker's
@@ -285,19 +285,16 @@ func root(_ *cobra.Command, _ []string) {
 		go httpWorker(jobs, results)
 	}
 
-	// start routine for sending all the urls into the pool
-	go func() {
-		for _, u := range urls {
-			reqURL, err := url.Parse(u)
-			if err != nil {
-				log.Fatalf("unable to parse url %s: %s", u, err)
-			}
-
-			reqURL.RawQuery = q.Encode()
-
-			jobs <- reqURL
+	for _, u := range urls {
+		reqURL, err := url.Parse(u)
+		if err != nil {
+			log.Fatalf("unable to parse url %s: %s", u, err)
 		}
-	}()
+
+		reqURL.RawQuery = q.Encode()
+
+		jobs <- reqURL
+	}
 
 	// output results one at a time
 	counter := 0
