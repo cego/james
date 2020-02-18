@@ -272,11 +272,7 @@ func root(_ *cobra.Command, _ []string) {
 	}
 
 	results := make(chan keyResponse, len(urls))
-
 	concurrency := make(chan struct{}, 5)
-	for i := 0; i < 5; i++ {
-		concurrency <- struct{}{}
-	}
 
 	var wg sync.WaitGroup
 	for _, u := range urls {
@@ -289,10 +285,10 @@ func root(_ *cobra.Command, _ []string) {
 		reqURL.RawQuery = q.Encode()
 		wg.Add(1)
 		go func(u *url.URL) {
-			<-concurrency
+			concurrency <- struct{}{}
 			results <- doKeyRequest(reqURL)
 			wg.Done()
-			concurrency <- struct{}{}
+			<-concurrency
 		}(reqURL)
 	}
 
