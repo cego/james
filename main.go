@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -215,13 +216,6 @@ func doKeyRequest(url *url.URL) keyResponse {
 	return keyResult
 }
 
-func httpWorker(urls chan *url.URL, results chan keyResponse) {
-	for url := range urls {
-		keyResult := doKeyRequest(url)
-		results <- keyResult
-	}
-}
-
 func root(_ *cobra.Command, _ []string) {
 	if len(urls) == 0 {
 		urls = []string{fmt.Sprintf("https://github.com/%s.keys", username)}
@@ -277,27 +271,35 @@ func root(_ *cobra.Command, _ []string) {
 		q.Add("username", username)
 	}
 
-	jobs := make(chan *url.URL, len(urls))
 	results := make(chan keyResponse, len(urls))
 
-	// startup some httpWorker's
-	for w := 1; w <= 5; w++ {
-		go httpWorker(jobs, results)
+	concurrency := make(chan struct{}, 5)
+	for i := 0; i < 5; i++ {
+		concurrency <- struct{}{}
 	}
 
+	var wg sync.WaitGroup
 	for _, u := range urls {
+
 		reqURL, err := url.Parse(u)
 		if err != nil {
 			log.Fatalf("unable to parse url %s: %s", u, err)
 		}
 
 		reqURL.RawQuery = q.Encode()
-
-		jobs <- reqURL
+		wg.Add(1)
+		go func(u *url.URL) {
+			<-concurrency
+			results <- doKeyRequest(reqURL)
+			wg.Done()
+			concurrency <- struct{}{}
+		}(reqURL)
 	}
 
+	wg.Wait()
+	close(results)
+
 	// output results one at a time
-	counter := 0
 	for k := range results {
 		if k.Error != nil {
 			fmt.Fprintf(os.Stdout, "# %s\n## Error: %s\n\n", k.URL, k.Error)
@@ -305,11 +307,6 @@ func root(_ *cobra.Command, _ []string) {
 
 		} else {
 			fmt.Fprintf(os.Stdout, "# %s\n%s\n", k.URL, k.Payload)
-		}
-
-		counter++
-		if counter == len(urls) {
-			os.Exit(0)
 		}
 	}
 }
