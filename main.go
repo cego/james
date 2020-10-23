@@ -36,6 +36,7 @@ var (
 	useSyslog     = true
 	url           string
 	guessRemoteIP bool
+	remoteIP      string
 	dumpPath      string
 
 	rootCmd = &cobra.Command{
@@ -106,6 +107,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&url, "url", "", "", "URL to use")
 	rootCmd.PersistentFlags().BoolVarP(&guessRemoteIP, "guess-remote-ip", "", true, "Try to guess remote IP. Requires root")
+	rootCmd.PersistentFlags().StringVarP(&remoteIP, "remote-ip", "", "", "The IP address of the connecting user")
 	rootCmd.PersistentFlags().BoolVarP(&useSyslog, "use-syslog", "", useSyslog, "Log to syslog")
 	rootCmd.PersistentFlags().StringVarP(&dumpPath, "dump", "", "", "Dump HTTP request/response to path")
 }
@@ -182,7 +184,11 @@ func root(_ *cobra.Command, _ []string) {
 	q := req.URL.Query()
 	req.URL.RawQuery = q.Encode()
 
-	if guessRemoteIP {
+	switch {
+	case remoteIP != "":
+		q.Add("remote_ip", remoteIP)
+
+	case guessRemoteIP:
 		sockets, err := getOpenSockets(os.Getppid())
 		if err != nil {
 			log.Fatalf("Error: %s", err.Error())
