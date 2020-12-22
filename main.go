@@ -2,17 +2,21 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"log/syslog"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -34,7 +38,7 @@ var (
 	port     uint16
 
 	useSyslog     = true
-	url           string
+	urls          []string
 	guessRemoteIP bool
 	remoteIP      string
 	dumpPath      string
@@ -48,6 +52,12 @@ var (
 
 	dumpWriter io.Writer
 )
+
+type keyResponse struct {
+	URL     *url.URL
+	Payload []byte
+	Error   error
+}
 
 // fqdn will try to guess the FQDN based on the same technique used by
 // hostname -f.
@@ -105,7 +115,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&hostname, "hostname", "", fqdn(), "The local hostname")
 	rootCmd.PersistentFlags().Uint16VarP(&port, "port", "", 22, "The port SSH is listening to")
 
-	rootCmd.PersistentFlags().StringVarP(&url, "url", "", "", "URL to use")
+	rootCmd.PersistentFlags().StringSliceVarP(&urls, "url", "", []string{}, "URL to use - may be specified multiple times")
 	rootCmd.PersistentFlags().BoolVarP(&guessRemoteIP, "guess-remote-ip", "", true, "Try to guess remote IP. Requires root")
 	rootCmd.PersistentFlags().StringVarP(&remoteIP, "remote-ip", "", "", "The IP address of the connecting user")
 	rootCmd.PersistentFlags().BoolVarP(&useSyslog, "use-syslog", "", useSyslog, "Log to syslog")
@@ -169,21 +179,52 @@ func httpDo(req *http.Request) (*http.Response, error) {
 		time.Sleep(backOff * time.Duration(retryCount))
 	}
 
-	return nil, fmt.Errorf("giving up on %s", url)
+	return nil, fmt.Errorf("giving up on %s", req.URL)
+}
+func doKeyRequest(url *url.URL) keyResponse {
+	keyResult := keyResponse{URL: url}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
+	if err != nil {
+		keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
+		return keyResult
+	}
+
+	resp, err := httpDo(req)
+	if err != nil {
+		keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
+		return keyResult
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		keyResult.Error = fmt.Errorf("HTTP unexpected status code %s: %d", url, resp.StatusCode)
+		return keyResult
+	}
+
+	// lets just say every http request does not produce more then a meg of public key material
+	limit := io.LimitReader(resp.Body, 1024*1024)
+
+	body, err := ioutil.ReadAll(limit)
+	if err != nil {
+		keyResult.Error = fmt.Errorf("HTTP Error %s: %w", url, err)
+		return keyResult
+	}
+
+	keyResult.Payload = body
+	return keyResult
 }
 
 func root(_ *cobra.Command, _ []string) {
-	if url == "" {
-		url = fmt.Sprintf("https://github.com/%s.keys", username)
+	if len(urls) == 0 {
+		urls = []string{fmt.Sprintf("https://github.com/%s.keys", username)}
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Fatalf("Error: %s", err.Error())
-	}
-
-	q := req.URL.Query()
-	req.URL.RawQuery = q.Encode()
+	q := url.Values{}
 
 	switch {
 	case remoteIP != "":
@@ -237,17 +278,39 @@ func root(_ *cobra.Command, _ []string) {
 		q.Add("username", username)
 	}
 
-	req.URL.RawQuery = q.Encode()
+	results := make(chan keyResponse, len(urls))
+	concurrency := make(chan struct{}, 5)
 
-	resp, err := httpDo(req)
-	if err != nil {
-		log.Fatalf("HTTP error: %s", err.Error())
+	var wg sync.WaitGroup
+	for _, u := range urls {
+
+		reqURL, err := url.Parse(u)
+		if err != nil {
+			log.Fatalf("unable to parse url %s: %s", u, err)
+		}
+
+		reqURL.RawQuery = q.Encode()
+		wg.Add(1)
+		go func(u *url.URL) {
+			concurrency <- struct{}{}
+			results <- doKeyRequest(reqURL)
+			wg.Done()
+			<-concurrency
+		}(reqURL)
 	}
-	defer resp.Body.Close()
 
-	_, err = io.Copy(os.Stdout, resp.Body)
-	if err != nil {
-		log.Fatalf("Error copying response to stdout: %s", err.Error())
+	wg.Wait()
+	close(results)
+
+	// output results one at a time
+	for k := range results {
+		if k.Error != nil {
+			fmt.Fprintf(os.Stdout, "# %s\n## Error: %s\n\n", k.URL, k.Error)
+			log.Printf("key result error: %s", k.Error)
+
+		} else {
+			fmt.Fprintf(os.Stdout, "# %s\n%s\n", k.URL, k.Payload)
+		}
 	}
 }
 
