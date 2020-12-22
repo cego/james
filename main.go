@@ -136,6 +136,7 @@ func prerun(_ *cobra.Command, _ []string) {
 func httpDo(req *http.Request) (*http.Response, error) {
 	backOff := time.Millisecond * 250
 
+	req.Header.Set("User-Agent", fmt.Sprintf("%s/1.0", strings.Title(appName)))
 	if req.Body != nil {
 		panic("httpDo() only supports requests without body")
 	}
