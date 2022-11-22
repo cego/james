@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -195,10 +196,17 @@ func root(_ *cobra.Command, _ []string) {
 			log.Fatalf("Error: %s", err.Error())
 		}
 
-		connections, err := getTCP4Connections(sockets)
+		connections4, err := getTCP4Connections(sockets)
 		if err != nil {
 			log.Fatalf("Error: %s", err.Error())
 		}
+
+		connections6, err := getTCP6Connections(sockets)
+		if err != nil {
+			log.Fatalf("Error: %s", err.Error())
+		}
+
+		connections := append(connections4, connections6)
 
 		if len(connections) != 1 {
 			log.Fatalf("Unable to guess remote IP. %d results returned", len(connections))
@@ -292,13 +300,22 @@ func getOpenSockets(pid int) ([]int, error) {
 }
 
 func hexToIP(hex string) (*net.IPAddr, error) {
-	dec, err := strconv.ParseInt(hex, 16, 64)
+	data, err := hex.DecodeString(hex)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
+	ip := net.IP{data[3], data[2], data[1], data[0]}
 
-	// Convert to network order and construct net.IP.
-	ip := net.IP{byte(dec & 0xff), byte(dec >> 8 & 0xff), byte(dec >> 16 & 0xff), byte(dec >> 24 & 0xff)}
+	return &net.IPAddr{IP: ip}, nil
+}
+
+func hexToIP6(hex string) (*net.IPAddr, error) {
+	data, err := hex.DecodeString(hex)
+	if err != nil {
+		panic(err)
+	}
+	ip := net.IP{data[15], data[14], data[13], data[12], data[11], data[10], data[9], data[8], data[7],
+		data[6], data[5], data[4], data[3], data[2], data[1], data[0]}
 
 	return &net.IPAddr{IP: ip}, nil
 }
@@ -332,6 +349,52 @@ func getTCP4Connections(sockets []int) ([]net.Addr, error) {
 			for _, s := range sockets {
 				if s == inode {
 					ip, err := hexToIP(string(matches[1]))
+					if err != nil {
+						return nil, err
+					}
+
+					connections = append(connections, ip)
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return connections, nil
+}
+
+func getTCP6Connections(sockets []int) ([]net.Addr, error) {
+	t := regexp.MustCompile(`\w[0-9]*\:\ [0-9A-F]{32}:[0-9A-F]{4} ([0-9A-F]{32}):[0-9A-F]{4} [0-9A-F]{2} [0-9A-F]{8}:[0-9A-F]{8} [0-9A-F]{2}:[0-9A-F]{8} [0-9A-F]{8} *[0-9]* *[0-9] ([0-9]*)`)
+
+	f, err := os.Open("/proc/net/tcp6")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	// Throw away the first line containing headers.
+	scanner.Scan()
+
+	var connections []net.Addr
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		matches := t.FindSubmatch(line)
+
+		if len(matches) > 2 {
+			inode, err := strconv.Atoi(string(matches[2]))
+			if err != nil {
+				return nil, err
+			}
+
+			for _, s := range sockets {
+				if s == inode {
+					ip, err := hexToIP6(string(matches[1]))
 					if err != nil {
 						return nil, err
 					}
