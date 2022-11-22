@@ -299,8 +299,8 @@ func getOpenSockets(pid int) ([]int, error) {
 	return sockets, nil
 }
 
-func hexToIP(hex string) (*net.IPAddr, error) {
-	data, err := hex.DecodeString(hex)
+func hexToIP(hexStr string) (*net.IPAddr, error) {
+	data, err := hex.DecodeString(hexStr)
 	if err != nil {
 		panic(err)
 	}
@@ -309,8 +309,8 @@ func hexToIP(hex string) (*net.IPAddr, error) {
 	return &net.IPAddr{IP: ip}, nil
 }
 
-func hexToIP6(hex string) (*net.IPAddr, error) {
-	data, err := hex.DecodeString(hex)
+func hexToIP6(hexStr string) (*net.IPAddr, error) {
+	data, err := hex.DecodeString(hexStr)
 	if err != nil {
 		panic(err)
 	}
