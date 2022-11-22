@@ -206,7 +206,7 @@ func root(_ *cobra.Command, _ []string) {
 			log.Fatalf("Error: %s", err.Error())
 		}
 
-		connections := append(connections4, connections6)
+		connections := append(connections4, connections6...)
 
 		if len(connections) != 1 {
 			log.Fatalf("Unable to guess remote IP. %d results returned", len(connections))
