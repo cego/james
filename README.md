@@ -80,7 +80,3 @@ AuthorizedKeysCommandUser nobody
 AuthorizedKeysCommand /sbin/james --url https://ssh-gatekeeper.example.com -f %f -u %u
 AuthorizedKeysCommandUser root # required to guess remote IP
 ```
-
-## Known limitations
-
-IPv6 is currently not supported.
