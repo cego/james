@@ -12,7 +12,7 @@ func Test_hexToIP6(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{name: "Localhost ipv6", hexStr: "0000000000000000FFFF00000100007F", want: "::1", wantErr: false},
+		{name: "Localhost ipv6", hexStr: "00000000000000000000000001000000", want: "::1", wantErr: false},
 		{name: "ipv6", hexStr: "00470626018F10019E444EDD6FB5D22E", want: "2606:4700:110:8f01:dd4e:449e:2ed2:b56f", wantErr: false},
 	}
 	for _, tt := range tests {
@@ -37,7 +37,7 @@ func Test_hexToIP(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "Localhost ipv4", hexStr: "00000000", want: "127.0.0.1", wantErr: false},
-		{name: "ipv4", hexStr: "057EA8C0", want: "", wantErr: false},
+		{name: "ipv4", hexStr: "057EA8C0", want: "192.168.126.5", wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
