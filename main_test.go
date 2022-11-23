@@ -36,7 +36,7 @@ func Test_hexToIP(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{name: "Localhost ipv4", hexStr: "00000000", want: "127.0.0.1", wantErr: false},
+		{name: "Localhost ipv4", hexStr: "0100007F", want: "127.0.0.1", wantErr: false},
 		{name: "ipv4", hexStr: "057EA8C0", want: "192.168.126.5", wantErr: false},
 	}
 	for _, tt := range tests {
