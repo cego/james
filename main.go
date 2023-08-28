@@ -206,6 +206,18 @@ func root(_ *cobra.Command, _ []string) {
 			log.Fatalf("Error: %s", err.Error())
 		}
 
+		if len(connections4) == len(connections6) && len(connections4) == 1 {
+			ip4 := connections4[0]
+			ip6 := connections6[0]
+
+			if !ip4.Equal(ip6) {
+				log.Fatalf("Unable to guess remote IP, found unmatching ipv4 and ipv6 addr %s != %s", ip4.String(), ip6.String())
+			}
+
+			// Just keep the ipv4 if we get the same ip in both forms
+			connections6 = nil
+		}
+
 		connections := append(connections4, connections6...)
 
 		if len(connections) != 1 {
@@ -299,27 +311,27 @@ func getOpenSockets(pid int) ([]int, error) {
 	return sockets, nil
 }
 
-func hexToIP(hexStr string) (*net.IPAddr, error) {
+func hexToIP(hexStr string) (net.IP, error) {
 	data, err := hex.DecodeString(hexStr)
 	if err != nil {
 		return nil, err
 	}
 	ip := net.IP{data[3], data[2], data[1], data[0]}
 
-	return &net.IPAddr{IP: ip}, nil
+	return ip, nil
 }
 
-func hexToIP6(hexStr string) (*net.IPAddr, error) {
+func hexToIP6(hexStr string) (net.IP, error) {
 	data, err := hex.DecodeString(hexStr)
 	if err != nil {
 		return nil, err
 	}
 	ip := net.IP{data[3], data[2], data[1], data[0], data[7], data[6], data[5], data[4], data[11], data[10], data[9], data[8], data[15], data[14], data[13], data[12]}
 
-	return &net.IPAddr{IP: ip}, nil
+	return ip, nil
 }
 
-func getTCP4Connections(sockets []int) ([]net.Addr, error) {
+func getTCP4Connections(sockets []int) ([]net.IP, error) {
 	t := regexp.MustCompile(`\w[0-9]*\:\ [0-9A-F]{8}:[0-9A-F]{4} ([0-9A-F]{8}):[0-9A-F]{4} [0-9A-F]{2} [0-9A-F]{8}:[0-9A-F]{8} [0-9A-F]{2}:[0-9A-F]{8} [0-9A-F]{8} *[0-9]* *[0-9] ([0-9]*)`)
 
 	f, err := os.Open("/proc/net/tcp")
@@ -333,7 +345,7 @@ func getTCP4Connections(sockets []int) ([]net.Addr, error) {
 	// Throw away the first line containing headers.
 	scanner.Scan()
 
-	var connections []net.Addr
+	var connections []net.IP
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -365,7 +377,7 @@ func getTCP4Connections(sockets []int) ([]net.Addr, error) {
 	return connections, nil
 }
 
-func getTCP6Connections(sockets []int) ([]net.Addr, error) {
+func getTCP6Connections(sockets []int) ([]net.IP, error) {
 	t := regexp.MustCompile(`\w[0-9]*\:\ [0-9A-F]{32}:[0-9A-F]{4} ([0-9A-F]{32}):[0-9A-F]{4} [0-9A-F]{2} [0-9A-F]{8}:[0-9A-F]{8} [0-9A-F]{2}:[0-9A-F]{8} [0-9A-F]{8} *[0-9]* *[0-9] ([0-9]*)`)
 
 	f, err := os.Open("/proc/net/tcp6")
@@ -379,7 +391,7 @@ func getTCP6Connections(sockets []int) ([]net.Addr, error) {
 	// Throw away the first line containing headers.
 	scanner.Scan()
 
-	var connections []net.Addr
+	var connections []net.IP
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
