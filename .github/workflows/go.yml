@@ -14,7 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      test_ref: "-X main.Build=${{ vars.GITHUB_REF}}"
+      test_ref: "-X main.Build=${{ github.ref_name }}"
+      GITHUB_BRANCH: ${{ github.ref_name }}
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -25,7 +26,7 @@ jobs:
       run: |
         echo "${{ env.test_ref }}"
         echo "-X main.Build=${GITHUB_REF#refs/tags/v}"
-        echo "-X main.Build=${GITHUB_REF}"
+        echo "-X main.Build=${GITHUB_BRANCH}"
 
     - name: Git checkout
       uses: actions/checkout@v4
