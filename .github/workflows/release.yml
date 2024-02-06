@@ -8,6 +8,8 @@ jobs:
   releases-matrix:
     name: Release Go Binary
     runs-on: ubuntu-latest
+    env:
+      LDFLAG_PARAM: "-X main.Build=${{ github.ref_name }}"
     strategy:
       matrix:
         # build and publish in parallel: linux/amd64
@@ -29,4 +31,4 @@ jobs:
           binary_name: "james"
           extra_files: LICENSE README.md
           sha256sum: true
-          ldflags: "-X main.Build=${GITHUB_REF#refs/tags/v}"
+          ldflags: "${{ env.LDFLAG_PARAM }}"
