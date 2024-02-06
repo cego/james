@@ -23,7 +23,7 @@ jobs:
 
     - name: Test tag env
       run: |
-        echo "$test_ref"
+        echo "${test_ref}"
         echo "-X main.Build=${GITHUB_REF#refs/tags/v}"
         echo "-X main.Build=${GITHUB_REF}"
 
