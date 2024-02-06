@@ -13,6 +13,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      test_ref: "-X main.Build=${GITHUB_REF}"
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
@@ -21,6 +23,7 @@ jobs:
 
     - name: Test tag env
       run: |
+        echo "$test_ref"
         echo "-X main.Build=${GITHUB_REF#refs/tags/v}"
         echo "-X main.Build=${GITHUB_REF}"
 
