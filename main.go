@@ -19,6 +19,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Build A version string that can be set with
+//
+//	-ldflags "-X main.Build=SOMEVERSION"
+//
+// at compile-time.
+var Build string
+
 const (
 	appName = "james"
 )
@@ -41,10 +48,11 @@ var (
 	dumpPath      string
 
 	rootCmd = &cobra.Command{
-		Use:    appName,
-		PreRun: prerun,
-		Short:  "A helper for OpenSSH's AuthorizedKeysCommand",
-		Run:    root,
+		Use:     appName,
+		PreRun:  prerun,
+		Short:   "A helper for OpenSSH's AuthorizedKeysCommand",
+		Run:     root,
+		Version: Build,
 	}
 
 	dumpWriter io.Writer
