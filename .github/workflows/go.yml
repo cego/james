@@ -24,7 +24,7 @@ jobs:
     - name: TEST
       uses: wangyoucao577/go-release-action@v1.46
       with:
-        ldflags: "${{ env.LDFLAG_PARAM }}"
+        ldflags: "-X main.Build=${{ github.ref_name }}"
 
     - name: Git checkout
       uses: actions/checkout@v4
