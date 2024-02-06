@@ -19,6 +19,12 @@ jobs:
       with:
         go-version: 1.21
 
+    - name: Test tag env
+      run: |
+        echo "-X main.Build=${GITHUB_REF#refs/tags/v}"
+        echo "-X main.Build=${{env.GITHUB_REF#refs/tags/v}}"
+        echo ""-X main.Build=${{GITHUB_REF}}""
+
     - name: Git checkout
       uses: actions/checkout@v4
       with:
