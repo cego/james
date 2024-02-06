@@ -23,7 +23,7 @@ jobs:
       run: |
         echo "-X main.Build=${GITHUB_REF#refs/tags/v}"
         echo "-X main.Build=${{GITHUB_REF#refs/tags/v}}"
-        echo ""-X main.Build=${{GITHUB_REF}}""
+        echo "-X main.Build=${{GITHUB_REF}}"
 
     - name: Git checkout
       uses: actions/checkout@v4
