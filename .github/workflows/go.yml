@@ -14,7 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      test_ref: "-X main.Build=$(echo ${GITHUB_REF})"
+      echo_ref: ${GITHUB_REF}
+      test_ref: "-X main.Build=${{ env.echo_ref }}"
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
