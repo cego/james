@@ -26,8 +26,8 @@ jobs:
 
     - name: Build
       run: |
-        echo Build James ${{GITHUB_REF#refs/tags/v}}
-        go build -ldflags "-X main.Build=${{GITHUB_REF#refs/tags/v}}" -v ./...
+        echo "Build James" git describe --tags
+        go build -ldflags "-X main.Build=${GITHUB_REF#refs/tags/v}" -v ./...
 
     - name: Test
       run: go test -v ./...
