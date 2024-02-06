@@ -13,8 +13,6 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    env:
-      LDFLAG_PARAM: "-X main.Build=${{ github.ref_name }}"
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
