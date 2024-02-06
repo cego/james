@@ -14,13 +14,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      test_ref: "-X main.Build=${{ github.ref_name }}"
-      GITHUB_BRANCH: ${{ github.ref_name }}
+      LDFLAG_PARAM: "-X main.Build=${{ github.ref_name }}"
     steps:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
         go-version: 1.21
+
+    - name: Test tag env
+      run: |
+        echo ${{ env.test_ref }}
+        echo "${ldflags}"
+      with:
+        ldflags: "${{ env.LDFLAG_PARAM }}"
 
     - name: Git checkout
       uses: actions/checkout@v4
