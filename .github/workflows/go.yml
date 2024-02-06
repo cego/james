@@ -14,7 +14,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
@@ -28,7 +27,6 @@ jobs:
     - name: Build
       run: |
         LATEST_TAG=$(git describe --tags)
-        echo Build James $LATEST_TAG
         go build -ldflags "-X main.Build=$LATEST_TAG" -v ./...
 
     - name: Test
