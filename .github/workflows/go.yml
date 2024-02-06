@@ -21,13 +21,11 @@ jobs:
       with:
         go-version: 1.18
 
-    - name: Checkout code
-      uses: actions/checkout@v4
-
     - name: Build
       run: |
-        echo "Build James" git describe --tags
-        go build -ldflags "-X main.Build=${GITHUB_REF#refs/tags/v}" -v ./...
+        LATEST_TAG=$(git describe --tags)
+        echo Build James $LATEST_TAG
+        go build -ldflags "-X main.Build=$(LATEST_TAG)" -v ./...
 
     - name: Test
       run: go test -v ./...
