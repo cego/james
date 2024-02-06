@@ -19,9 +19,6 @@ jobs:
         with:
           fetch-depth: '0'
 
-      - name: Get latest tag
-        run: LATEST_TAG=$(git describe --tags)
-
       - name: Build release
         uses: wangyoucao577/go-release-action@v1.46
         with:
@@ -32,4 +29,4 @@ jobs:
           binary_name: "james"
           extra_files: LICENSE README.md
           sha256sum: true
-          ldflags: "-X main.Build=$LATEST_TAG"
+          ldflags: "-X main.Build=$(git describe --tags)"
