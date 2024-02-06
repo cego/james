@@ -21,11 +21,6 @@ jobs:
       with:
         go-version: 1.21
 
-    - name: TEST
-      uses: wangyoucao577/go-release-action@v1.46
-      with:
-        ldflags: "-X main.Build=${{ github.ref_name }}"
-
     - name: Git checkout
       uses: actions/checkout@v4
       with:
