@@ -29,4 +29,4 @@ jobs:
           binary_name: "james"
           extra_files: LICENSE README.md
           sha256sum: true
-          ldflags: "-X main.Build=$(git describe --tags)"
+          ldflags: "-X main.Build=${GITHUB_REF#refs/tags/v}"

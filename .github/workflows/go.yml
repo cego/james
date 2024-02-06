@@ -25,9 +25,7 @@ jobs:
         fetch-depth: '0'
 
     - name: Build
-      run: |
-        LATEST_TAG=$(git describe --tags)
-        go build -ldflags "-X main.Build=$LATEST_TAG" -v ./...
+      run: go build -v ./...
 
     - name: Test
       run: go test -v ./...
