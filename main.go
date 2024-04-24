@@ -229,7 +229,7 @@ func root(_ *cobra.Command, _ []string) {
 		connections := append(connections4, connections6...)
 
 		if len(connections) != 1 {
-			log.Fatalf("Unable to guess remote IP. %d results returned", len(connections))
+			log.Fatalf("Unable to guess remote IP for %s. %d results returned, ipv4 connections '%v' , ipv6 connections '%v'", hostname, len(connections), connections4, connections6)
 		}
 
 		q.Add("remote_ip", connections[0].String())
