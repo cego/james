@@ -226,10 +226,14 @@ func root(_ *cobra.Command, _ []string) {
 			connections6 = nil
 		}
 
+		var connectionsMap map[string]bool
 		connections := append(connections4, connections6...)
+		for _, ip := range connections {
+			connectionsMap[ip.String()] = true
+		}
 
-		if len(connections) != 1 {
-			log.Fatalf("Unable to guess remote IP for %s. %d results returned, ipv4 connections '%v' , ipv6 connections '%v'", hostname, len(connections), connections4, connections6)
+		if len(connectionsMap) != 1 {
+			log.Fatalf("Unable to guess remote IP for %s. %d results returned, connectionMap '%v', ipv4 connections '%v' , ipv6 connections '%v'", hostname, len(connectionsMap), connectionsMap, connections4, connections6)
 		}
 
 		q.Add("remote_ip", connections[0].String())
