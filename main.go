@@ -226,8 +226,8 @@ func root(_ *cobra.Command, _ []string) {
 			connections6 = nil
 		}
 
-		var connectionsMap map[string]bool
 		connections := append(connections4, connections6...)
+		connectionsMap := make(map[string]bool, len(connections))
 		for _, ip := range connections {
 			connectionsMap[ip.String()] = true
 		}
