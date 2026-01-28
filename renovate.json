@@ -1,0 +1,3 @@
+{
+	"extends": ["config:best-practices", "config:recommended", ":gomod", ":maintainLockFilesMonthly", ":disableDependencyDashboard"]
+}
