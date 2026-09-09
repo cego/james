@@ -8,6 +8,8 @@ jobs:
   releases-matrix:
     name: Release Go Binary
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         # build and publish in parallel: linux/amd64
