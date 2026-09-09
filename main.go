@@ -344,7 +344,7 @@ func hexToIP6(hexStr string) (net.IP, error) {
 }
 
 func getTCP4Connections(sockets []int) ([]net.IP, error) {
-	t := regexp.MustCompile(`\w[0-9]*\:\ [0-9A-F]{8}:[0-9A-F]{4} ([0-9A-F]{8}):[0-9A-F]{4} [0-9A-F]{2} [0-9A-F]{8}:[0-9A-F]{8} [0-9A-F]{2}:[0-9A-F]{8} [0-9A-F]{8} *[0-9]* *[0-9] ([0-9]*)`)
+	t := regexp.MustCompile(`^\s+[0-9]+: [0-9A-F]{8}:[0-9A-F]{4} ([0-9A-F]{8}):[0-9A-F]{4} [0-9A-F]{2} [0-9A-F]{8}:[0-9A-F]{8} [0-9A-F]{2}:[0-9A-F]{8} [0-9A-F]{8}\s+[0-9]+\s+[0-9]+ ([0-9]+)`)
 
 	f, err := os.Open("/proc/net/tcp")
 	if err != nil {
@@ -390,7 +390,7 @@ func getTCP4Connections(sockets []int) ([]net.IP, error) {
 }
 
 func getTCP6Connections(sockets []int) ([]net.IP, error) {
-	t := regexp.MustCompile(`\w[0-9]*\:\ [0-9A-F]{32}:[0-9A-F]{4} ([0-9A-F]{32}):[0-9A-F]{4} [0-9A-F]{2} [0-9A-F]{8}:[0-9A-F]{8} [0-9A-F]{2}:[0-9A-F]{8} [0-9A-F]{8} *[0-9]* *[0-9] ([0-9]*)`)
+	t := regexp.MustCompile(`^\s+[0-9]+: [0-9A-F]{32}:[0-9A-F]{4} ([0-9A-F]{32}):[0-9A-F]{4} [0-9A-F]{2} [0-9A-F]{8}:[0-9A-F]{8} [0-9A-F]{2}:[0-9A-F]{8} [0-9A-F]{8}\s+[0-9]+\s+[0-9]+ ([0-9]+)`)
 
 	f, err := os.Open("/proc/net/tcp6")
 	if err != nil {
