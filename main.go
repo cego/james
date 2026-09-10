@@ -41,11 +41,12 @@ var (
 	hostname string
 	port     uint16
 
-	useSyslog     = true
-	url           string
-	guessRemoteIP bool
-	remoteIP      string
-	dumpPath      string
+	useSyslog      = true
+	url            string
+	guessRemoteIP  bool
+	remoteIP       string
+	connectionInfo string
+	dumpPath       string
 
 	rootCmd = &cobra.Command{
 		Use:     appName,
@@ -117,6 +118,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&url, "url", "", "", "URL to use")
 	rootCmd.PersistentFlags().BoolVarP(&guessRemoteIP, "guess-remote-ip", "", true, "Try to guess remote IP. Requires root")
 	rootCmd.PersistentFlags().StringVarP(&remoteIP, "remote-ip", "", "", "The IP address of the connecting user")
+	rootCmd.PersistentFlags().StringVarP(&connectionInfo, "connection-info", "C", "", "SSH connection info(%C)")
 	rootCmd.PersistentFlags().BoolVarP(&useSyslog, "use-syslog", "", useSyslog, "Log to syslog")
 	rootCmd.PersistentFlags().StringVarP(&dumpPath, "dump", "", "", "Dump HTTP request/response to path")
 }
@@ -197,7 +199,12 @@ func root(_ *cobra.Command, _ []string) {
 	switch {
 	case remoteIP != "":
 		q.Add("remote_ip", remoteIP)
-
+	case connectionInfo != "":
+		connectionInfos := strings.Split(connectionInfo, " ")
+		if len(connectionInfos) != 4 {
+			log.Fatalf("Unable to get remote IP, from ssh connection info: %s", connectionInfo)
+		}
+		q.Add("remote_ip", connectionInfos[2])
 	case guessRemoteIP:
 		sockets, err := getOpenSockets(os.Getppid())
 		if err != nil {
