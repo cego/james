@@ -17,12 +17,12 @@ jobs:
         goarch: [amd64,arm64]
     steps:
       - name: Git checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: '0'
 
       - name: Build release
-        uses: wangyoucao577/go-release-action@v1.46
+        uses: wangyoucao577/go-release-action@23b3194d60e5291b78d4ebf84705f5d6c5a74c0e # v1.46
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
