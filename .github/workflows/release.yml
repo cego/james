@@ -22,7 +22,7 @@ jobs:
           fetch-depth: '0'
 
       - name: Build release
-        uses: wangyoucao577/go-release-action@v1.46
+        uses: wangyoucao577/go-release-action@279495102627de7960cbc33434ab01a12bae144b # v1.55
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
